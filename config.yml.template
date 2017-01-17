@@ -1,0 +1,23 @@
+parameters:
+      
+    px:
+        onlyForScans: true
+        server: 'svc-cd-notify.secprodsupport.marathon.alertlogic.net'
+        port: '8320'
+        headers:
+            - 'Accept: application/json' 
+            - 'X-AlertLogic-Identity: 2:123'
+            - 'Content-Type: application/json'
+        endpoint: '/api/notify/v2/notification_policies'
+        endpointTargets: '/api/notify/v2/notification_targets'
+      
+    acheron:
+      onlyForScans: true
+      server: 'svc-cdia-notify.marathon.alertlogic.net'
+      port: '8320'
+      headers:
+          - 'Accept: application/json' 
+          - 'X-AlertLogic-Identity: 2:123'
+          - 'Content-Type: application/json'
+      endpoint: '/api/notify/v2/notification_policies'
+      endpointTargets: '/api/notify/v2/notification_targets'               
