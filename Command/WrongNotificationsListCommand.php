@@ -21,7 +21,7 @@ class WrongNotificationsListCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        // Load customer from yaml file
+        // Load customers from yaml file
         $this->getApplication()->loadYaml('customers.yml');
         
         // parameters
@@ -41,8 +41,11 @@ class WrongNotificationsListCommand extends Command
         // start    
         $output->writeln('<info>Processing start</>');
         $output->writeln('');
-        
+        $listNPwithTargetUnknown = array();
+        $listNPdoesntExist = array();
         foreach ($customers as $customerId) {
+            
+            $output->writeln('<fg=red>******************** Customer: ' . $customerId . " ********************</>");
             $endpoint  = "http://" . $server . ":" . $port 
                 . $parameters['endpoint']
                 . "?customer_id=" . $customerId;
@@ -99,13 +102,14 @@ class WrongNotificationsListCommand extends Command
             }
         }
         
-        var_dump($listNPdoesntExist);
         $output->writeln("");
         $output->writeln("<info>Completion of processing</>");
         $output->writeln("");
         $output->writeln("");
 
-        foreach ($listNPwithTargetUnknown as $customer) {
+        foreach ($listNPwithTargetUnknown as $cid => $customer) {
+            $output->writeln("");
+            $output->writeln('<fg=red>******************** Customer: ' . $cid . " ********************</>");
             $tableNPwithTargetUnknown = new Table($output);
             $tableNPwithTargetUnknown
                 ->setHeaders(array('NP id', 'NP name', 'NP CID','NT id','NT name','NT CID'));
@@ -123,7 +127,11 @@ class WrongNotificationsListCommand extends Command
             }    
             $tableNPwithTargetUnknown->render();
             $output->writeln("");
-
+        }
+        
+        foreach ($listNPdoesntExist as $cid => $customer) {
+            $output->writeln("");
+            $output->writeln('<fg=red>******************** Customer: ' . $cid . " ********************</>");
             $tableNPdoesntExist = new Table($output);
             $tableNPdoesntExist
                 ->setHeaders(array('NT name','message'));
