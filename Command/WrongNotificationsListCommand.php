@@ -6,6 +6,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Helper\TableSeparator;
+use Symfony\Component\Console\Helper\TableCell;
 
 class WrongNotificationsListCommand extends Command
 {
@@ -43,8 +45,13 @@ class WrongNotificationsListCommand extends Command
         $output->writeln('');
         $listNPwithTargetUnknown = array();
         $listNPdoesntExist = array();
+        $stats = array();
         foreach ($customers as $customerId) {
-            
+            $numberNP = 0;
+            $numberNT = 0;
+            $numberNPSkipped = 0;
+            $numberNPFailed = 0;
+            $numberNTWrong = 0;
             $output->writeln('<fg=red>******************** Customer: ' . $customerId . " ********************</>");
             $endpoint  = "http://" . $server . ":" . $port 
                 . $parameters['endpoint']
@@ -57,49 +64,64 @@ class WrongNotificationsListCommand extends Command
             $notificationPoliciesJson = curl_exec($ch);						// Execute
             curl_close($ch);								// Closing
             $notificationPolicies = json_decode($notificationPoliciesJson, true);
-            //For each notification policy I need to ask if the target is of the same customer
-            foreach ($notificationPolicies['notification_policies'] as $notificationPolicy) {
-                $output->writeln('');
-                $output->writeln('<info>*</> ' . $notificationPolicy['name']);
-                if (!$onlyForScans || $notificationPolicy['alert_definition_type_id'] === '705A0DE8-AC55-BCC7-B55C-F35720D40E56') {
-                    if (isset($notificationPolicy['notification_targets'])) {
-                        # get data for each Notification target
-                        foreach ($notificationPolicy['notification_targets'] as $notificationTarget) {
-                            $ch2 = curl_init();								 // Initiate curl
-                            curl_setopt($ch2, CURLOPT_HTTPHEADER, $headers); // Set The Response Format to Json
-                            curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true); // Will return the response, if false it print the response
-                            curl_setopt($ch2, CURLOPT_URL, $endpointTargets . "/" . $notificationTarget); // Set the url
-                            $ntJson = curl_exec($ch2);						 // Execute
-                            curl_close($ch2);								 // Closing
-                            $nt = json_decode($ntJson, true);
-                            $output->writeln("\t<info>" .  $nt['target'] ."</>");;
-                            if (isset($nt) && array_key_exists("id", $nt)) {
-                                if ($customerId != $nt['customer_id']) {
-                                    $listNPwithTargetUnknown[$customerId][] = 	array(
-                                        'notificationPolicy' => array(
-                                            'id'					=> $notificationPolicy['id'],
-                                            'name'				=> $notificationPolicy['name'],
-                                            'customer_id' => $notificationPolicy['customer_id']
-                                        ),
-                                        'NotificationTarget' => array(
-                                            'id'					=> $nt['id'],
-                                            'target'			=> $nt['target'],
-                                            'customer_id' => $nt['customer_id']
-                                        )
+            //For each notification policy I need to ask if the target(s) is/are of the same customer
+            if(isset($notificationPolicies['notification_policies'])) {
+                foreach ($notificationPolicies['notification_policies'] as $notificationPolicy) {
+                    $output->writeln('');
+                    $output->writeln('<info>*</> ' . $notificationPolicy['name']);
+                    if (!$onlyForScans || $notificationPolicy['alert_definition_type_id'] === '705A0DE8-AC55-BCC7-B55C-F35720D40E56') { // <- definition type for scans
+                        $numberNP++;
+                        if (isset($notificationPolicy['notification_targets'])) {
+                            // get data for each Notification target
+                            foreach ($notificationPolicy['notification_targets'] as $notificationTarget) {
+                                $ch2 = curl_init();								 // Initiate curl
+                                curl_setopt($ch2, CURLOPT_HTTPHEADER, $headers); // Set The Response Format to Json
+                                curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true); // Will return the response, if false it print the response
+                                curl_setopt($ch2, CURLOPT_URL, $endpointTargets . "/" . $notificationTarget); // Set the url
+                                $ntJson = curl_exec($ch2);						 // Execute
+                                curl_close($ch2);								 // Closing
+                                $nt = json_decode($ntJson, true);
+                                $output->writeln("\t<info>" .  $nt['target'] ."</>");
+                                if (isset($nt) && array_key_exists("id", $nt)) {
+                                    $numberNT++;
+                                    if ($customerId != $nt['customer_id']) {
+                                        $numberNTWrong++;
+                                        $listNPwithTargetUnknown[$customerId][] = 	array(
+                                            'notificationPolicy' => array(
+                                                'id'					=> $notificationPolicy['id'],
+                                                'name'				=> $notificationPolicy['name'],
+                                                'customer_id' => $notificationPolicy['customer_id']
+                                            ),
+                                            'NotificationTarget' => array(
+                                                'id'					=> $nt['id'],
+                                                'target'			=> $nt['target'],
+                                                'customer_id' => $nt['customer_id']
+                                            )
+                                        );
+                                    }
+                                } else {
+                                    $numberNPFailed++;
+                                    $listNPdoesntExist[$customerId][] = 	array(
+                                        "nt"  => $notificationTarget,
+                                        "np"  => $notificationPolicy['id'],
+                                        "msg" => $nt
                                     );
                                 }
-                            } else {
-                                $listNPdoesntExist[$customerId][] = 	array(
-                                    "nt"  => $notificationTarget,
-                                    "msg" => $nt
-                                );
                             }
-                        }
-                    } 
-                } else {
-                    $output->writeln("\t<comment>Ignored</>");
+                        } 
+                    } else {
+                        $numberNPSkipped++;
+                        $output->writeln("\t<comment>Skipped</>");
+                    }
                 }
             }
+            $stats[$customerId] = array(
+                'numberNP'          => $numberNP,
+                'numberNT'          => $numberNT,
+                'numberNPSkipped'   => $numberNPSkipped,
+                'numberNPFailed'    => $numberNPFailed,
+                'numberNTWrong'    => $numberNTWrong
+            );
         }
         
         $output->writeln("");
@@ -107,6 +129,7 @@ class WrongNotificationsListCommand extends Command
         $output->writeln("");
         $output->writeln("");
 
+        // shows a table with notification policies with targets that belong to other customer. 
         foreach ($listNPwithTargetUnknown as $cid => $customer) {
             $output->writeln("");
             $output->writeln('<fg=red>******************** Customer: ' . $cid . " ********************</>");
@@ -129,16 +152,17 @@ class WrongNotificationsListCommand extends Command
             $output->writeln("");
         }
         
+        // shows a table with notification policies with targets that doesn't exist.
         foreach ($listNPdoesntExist as $cid => $customer) {
             $output->writeln("");
             $output->writeln('<fg=red>******************** Customer: ' . $cid . " ********************</>");
             $tableNPdoesntExist = new Table($output);
-            $tableNPdoesntExist
-                ->setHeaders(array('NT name','message'));
+            $tableNPdoesntExist->setHeaders(array('NT ID', 'NP ID', 'Message'));
             foreach ($customer as $element) {
                 $tableNPdoesntExist->addRows(array(
                     array(
                       $element['nt'],
+                      $element['np'],
                       json_encode($element['msg'])
                     ),
                 ));
@@ -146,6 +170,56 @@ class WrongNotificationsListCommand extends Command
             $tableNPdoesntExist->render();
             $output->writeln("");
           }
+          // shows summary table
+          $output->writeln("<fg=red>******************** SUMMARY ********************</>");
+          $tableSummary = new Table($output);
+          $tableSummary
+              ->setHeaders(array('Customer Id', 'NP Processed', 'NT Processed','NP skipped','NP Failed', 'NT Wrong'));
+          $numberNP = 0;
+          $numberNT = 0;
+          $numberNPSkipped = 0;
+          $numberNPFailed = 0;
+          $numberNTWrong = 0;
+          foreach ($stats as $cid => $customer) {
+              $tableSummary->addRows(array(
+                  array(
+                    $cid,
+                    $customer['numberNP'],
+                    $customer['numberNT'],
+                    $customer['numberNPSkipped'],
+                    $customer['numberNPFailed'],
+                    $customer['numberNTWrong']
+                  ),
+              ));
+              $numberNP += $customer['numberNP'];
+              $numberNT += $customer['numberNT'];
+              $numberNPSkipped += $customer['numberNPSkipped'];
+              $numberNPFailed += $customer['numberNPFailed'];
+              $numberNTWrong += $customer['numberNTWrong'];
+          }
+          $tableSummary->addRows(array(
+              new TableSeparator(),
+              array(
+                  'Total',
+                  $numberNP,
+                  $numberNT,
+                  $numberNPSkipped,
+                  $numberNPFailed,
+                  $numberNTWrong
+              )
+          ));
+          
+          $tableSummary->render();
+          $output->writeln("");
+          $output->writeln("Customers processed: " . count($customers));
+          if ($numberNT >0 ) {
+              $percentage = ($numberNTWrong / $numberNT) * 100;
+          } else {
+              $percentage = '---';
+          }
+          $output->write("Percentage of wrong NT: ");
+          $output->writeln(is_string($percentage) ? $percentage : number_format($percentage, 1));
+
           $output->writeln("");
         
     }
