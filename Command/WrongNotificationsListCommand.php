@@ -51,6 +51,7 @@ class WrongNotificationsListCommand extends Command
             $numberNT = 0;
             $numberNPSkipped = 0;
             $numberNPFailed = 0;
+            $numberNTFailed = 0;
             $numberNTWrong = 0;
             $output->writeln('<fg=red>******************** Customer: ' . $customerId . " ********************</>");
             $endpoint  = "http://" . $server . ":" . $port 
@@ -67,9 +68,10 @@ class WrongNotificationsListCommand extends Command
             //For each notification policy I need to ask if the target(s) is/are of the same customer
             if(isset($notificationPolicies['notification_policies'])) {
                 foreach ($notificationPolicies['notification_policies'] as $notificationPolicy) {
+                    $NPFailed = false;
                     $output->writeln('');
                     $output->writeln('<info>*</> ' . $notificationPolicy['name']);
-                    if (!$onlyForScans || $notificationPolicy['alert_definition_type_id'] === '705A0DE8-AC55-BCC7-B55C-F35720D40E56') { // <- definition type for scans
+                    if ( ! $onlyForScans || ($onlyForScans && $notificationPolicy['alert_definition_type_id'] === '705A0DE8-AC55-BCC7-B55C-F35720D40E56') ) { // <- definition type for scans
                         $numberNP++;
                         if (isset($notificationPolicy['notification_targets'])) {
                             // get data for each Notification target
@@ -85,6 +87,7 @@ class WrongNotificationsListCommand extends Command
                                 if (isset($nt) && array_key_exists("id", $nt)) {
                                     $numberNT++;
                                     if ($customerId != $nt['customer_id']) {
+                                        $NPFailed = true;
                                         $numberNTWrong++;
                                         $listNPwithTargetUnknown[$customerId][] = 	array(
                                             'notificationPolicy' => array(
@@ -100,7 +103,8 @@ class WrongNotificationsListCommand extends Command
                                         );
                                     }
                                 } else {
-                                    $numberNPFailed++;
+                                    $NPFailed = true;
+                                    $numberNTFailed++;
                                     $listNPdoesntExist[$customerId][] = 	array(
                                         "nt"  => $notificationTarget,
                                         "np"  => $notificationPolicy['id'],
@@ -109,10 +113,15 @@ class WrongNotificationsListCommand extends Command
                                 }
                             }
                         } 
+                        if ($NPFailed) {
+                          $numberNPFailed++;
+                        }
                     } else {
                         $numberNPSkipped++;
                         $output->writeln("\t<comment>Skipped</>");
                     }
+                    
+                    
                 }
             }
             $stats[$customerId] = array(
@@ -120,6 +129,7 @@ class WrongNotificationsListCommand extends Command
                 'numberNT'          => $numberNT,
                 'numberNPSkipped'   => $numberNPSkipped,
                 'numberNPFailed'    => $numberNPFailed,
+                'numberNTFailed'    => $numberNTFailed,
                 'numberNTWrong'    => $numberNTWrong
             );
         }
@@ -135,10 +145,12 @@ class WrongNotificationsListCommand extends Command
             $output->writeln('<fg=red>******************** Customer: ' . $cid . " ********************</>");
             $tableNPwithTargetUnknown = new Table($output);
             $tableNPwithTargetUnknown
-                ->setHeaders(array('NP id', 'NP name', 'NP CID','NT id','NT name','NT CID'));
+                ->setHeaders(array('', 'NP id', 'NP name', 'NP CID','NT id','NT name','NT CID'));
+            $i = 0;
             foreach ($customer as $element) {
                 $tableNPwithTargetUnknown->addRows(array(
                     array(
+                      ++$i,
                       $element['notificationPolicy']['id'],
                       $element['notificationPolicy']['name'],
                       $element['notificationPolicy']['customer_id'],
@@ -157,12 +169,14 @@ class WrongNotificationsListCommand extends Command
             $output->writeln("");
             $output->writeln('<fg=red>******************** Customer: ' . $cid . " ********************</>");
             $tableNPdoesntExist = new Table($output);
-            $tableNPdoesntExist->setHeaders(array('NT ID', 'NP ID', 'Message'));
+            $tableNPdoesntExist->setHeaders(array('', 'NP ID', 'NT ID', 'Message'));
+            $i = 0;
             foreach ($customer as $element) {
                 $tableNPdoesntExist->addRows(array(
                     array(
-                      $element['nt'],
+                      ++$i,
                       $element['np'],
+                      $element['nt'],
                       json_encode($element['msg'])
                     ),
                 ));
@@ -170,24 +184,29 @@ class WrongNotificationsListCommand extends Command
             $tableNPdoesntExist->render();
             $output->writeln("");
           }
+          
           // shows summary table
+          $i = 0;
           $output->writeln("<fg=red>******************** SUMMARY ********************</>");
           $tableSummary = new Table($output);
           $tableSummary
-              ->setHeaders(array('Customer Id', 'NP Processed', 'NT Processed','NP skipped','NP Failed', 'NT Wrong'));
+              ->setHeaders(array('', 'Customer Id', 'NP Processed', 'NP skipped', 'NP Failed', 'NT Processed', 'NT Failed', 'NT Wrong'));
           $numberNP = 0;
           $numberNT = 0;
           $numberNPSkipped = 0;
           $numberNPFailed = 0;
+          $numberNTFailed = 0;
           $numberNTWrong = 0;
           foreach ($stats as $cid => $customer) {
               $tableSummary->addRows(array(
                   array(
+                    ++$i,
                     $cid,
                     $customer['numberNP'],
-                    $customer['numberNT'],
                     $customer['numberNPSkipped'],
                     $customer['numberNPFailed'],
+                    $customer['numberNT'],
+                    $customer['numberNTFailed'],
                     $customer['numberNTWrong']
                   ),
               ));
@@ -195,16 +214,24 @@ class WrongNotificationsListCommand extends Command
               $numberNT += $customer['numberNT'];
               $numberNPSkipped += $customer['numberNPSkipped'];
               $numberNPFailed += $customer['numberNPFailed'];
+              $numberNTFailed += $customer['numberNTFailed'];
               $numberNTWrong += $customer['numberNTWrong'];
           }
+          $tableSummary
+              ->addRows(array(
+                new TableSeparator(),
+                array('', 'Customer Id', 'NP Processed', 'NP skipped', 'NP Failed', 'NT Processed', 'NT Failed', 'NT Wrong')));
+          
           $tableSummary->addRows(array(
               new TableSeparator(),
               array(
                   'Total',
+                  '',
                   $numberNP,
-                  $numberNT,
                   $numberNPSkipped,
                   $numberNPFailed,
+                  $numberNT,
+                  $numberNTFailed,
                   $numberNTWrong
               )
           ));
