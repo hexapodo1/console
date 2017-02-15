@@ -108,6 +108,7 @@ class WrongNotificationsListCommand extends Command
                                     $listNPdoesntExist[$customerId][] = 	array(
                                         "nt"  => $notificationTarget,
                                         "np"  => $notificationPolicy['id'],
+                                        "npName"  => $notificationPolicy['name'],
                                         "msg" => $nt
                                     );
                                 }
@@ -169,13 +170,14 @@ class WrongNotificationsListCommand extends Command
             $output->writeln("");
             $output->writeln('<fg=red>******************** Customer: ' . $cid . " ********************</>");
             $tableNPdoesntExist = new Table($output);
-            $tableNPdoesntExist->setHeaders(array('', 'NP ID', 'NT ID', 'Message'));
+            $tableNPdoesntExist->setHeaders(array('', 'NP ID', 'NP NAME', 'NT ID', 'Message'));
             $i = 0;
             foreach ($customer as $element) {
                 $tableNPdoesntExist->addRows(array(
                     array(
                       ++$i,
                       $element['np'],
+                      $element['npName'],
                       $element['nt'],
                       json_encode($element['msg'])
                     ),
