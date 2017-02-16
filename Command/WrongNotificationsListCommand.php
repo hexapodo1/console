@@ -39,6 +39,8 @@ class WrongNotificationsListCommand extends Command
         $headers  = $parameters['headers'];
         $endpointTargets  = "http://" . $server . ":" . $port 
             . $parameters['endpointTargets'];
+        $endpointContacts  = "http://" . $server . ":" . $port 
+            . $parameters['endpointContacts'];
             
         // start    
         $output->writeln('<info>Processing start</>');
@@ -83,8 +85,37 @@ class WrongNotificationsListCommand extends Command
                                 $ntJson = curl_exec($ch2);						 // Execute
                                 curl_close($ch2);								 // Closing
                                 $nt = json_decode($ntJson, true);
-                                $output->writeln("\t<info>" .  $nt['target'] ."</>");
-                                if (isset($nt) && array_key_exists("id", $nt)) {
+                                if (isset($nt) && $nt['channel']==='group') {    
+                                    $output->writeln("\t<info>* Group *</>");
+                                    foreach ($nt['target'] as $contact) {
+                                        $ch3 = curl_init();								 // Initiate curl
+                                        curl_setopt($ch3, CURLOPT_HTTPHEADER, $headers); // Set The Response Format to Json
+                                        curl_setopt($ch3, CURLOPT_RETURNTRANSFER, true); // Will return the response, if false it print the response
+                                        curl_setopt($ch3, CURLOPT_URL, $endpointContacts . "/" . $contact); // Set the url
+                                        $ntJson = curl_exec($ch3);						 // Execute
+                                        curl_close($ch3);								 // Closing
+                                        $nc = json_decode($ntJson, true);
+                                        $numberNT++;
+                                        if ($customerId != $nc['customer_id']) {
+                                            $NPFailed = true;
+                                            $numberNTWrong++;
+                                            $listNPwithTargetUnknown[$customerId][] = 	array(
+                                                'notificationPolicy' => array(
+                                                    'id'					=> $notificationPolicy['id'],
+                                                    'name'				=> $notificationPolicy['name'],
+                                                    'customer_id' => $notificationPolicy['customer_id']
+                                                ),
+                                                'NotificationTarget' => array(
+                                                    'id'					=> '---',
+                                                    'target'			=> '* Group *',
+                                                    'customer_id' => $nc['customer_id']
+                                                )
+                                            );
+                                        }
+                                        break;
+                                    }    
+                                }elseif (isset($nt) && array_key_exists("id", $nt)) {
+                                    $output->writeln("\t<info>" .  $nt['target'] ."</>");
                                     $numberNT++;
                                     if ($customerId != $nt['customer_id']) {
                                         $NPFailed = true;
