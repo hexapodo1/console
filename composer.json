@@ -3,9 +3,14 @@
         "symfony/console": "^3.2",
         "symfony/dependency-injection": "^3.2",
         "symfony/config": "^3.2",
-        "symfony/yaml": "^3.2"
+        "symfony/yaml": "^3.2",
+        "monolog/monolog": "^1.22",
+        "pulse00/monolog-parser": "^0.0.3"
     },
     "autoload": {
-        "psr-4": {"Command\\": "Command/"}
+        "psr-4": {
+            "Command\\": "Command/",
+            "Utils\\": "Utils/"
+        }
     }
 }

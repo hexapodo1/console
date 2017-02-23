@@ -10,14 +10,31 @@ parameters:
             - 'Content-Type: application/json'
         endpoint: '/api/notify/v2/notification_policies'
         endpointTargets: '/api/notify/v2/notification_targets'
+        endpointContacts: '/api/notify/v2/contacts'
+        db:
+            servername: 127.0.0.1
+            username: root
+            password: 'S3cr3T'
+            db: db_scan
+            port: 3333
       
     acheron:
-      onlyForScans: true
-      server: 'svc-cdia-notify.marathon.alertlogic.net'
-      port: '8320'
-      headers:
-          - 'Accept: application/json' 
-          - 'X-AlertLogic-Identity: 2:123'
-          - 'Content-Type: application/json'
-      endpoint: '/api/notify/v2/notification_policies'
-      endpointTargets: '/api/notify/v2/notification_targets'               
+        onlyForScans: true
+        server: 'svc-cdia-notify.marathon.alertlogic.net'
+        port: '8320'
+        headers:
+            - 'Accept: application/json' 
+            - 'X-AlertLogic-Identity: 2:123'
+            - 'Content-Type: application/json'
+        endpoint: '/api/notify/v2/notification_policies'
+        endpointTargets: '/api/notify/v2/notification_targets'  
+        endpointContacts: '/api/notify/v2/contacts'             
+
+services:
+    curl:
+        class: Utils\Curl
+        arguments: ["@service_container"]
+      
+    connection:
+        class: Utils\Connection
+        arguments: ["@service_container"]
