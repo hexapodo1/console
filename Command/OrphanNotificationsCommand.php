@@ -24,13 +24,13 @@ class OrphanNotificationsCommand extends Command
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
-    {    
+    {
         // load the logger
         $log = $this->getApplication()->getLog();
-      
+
         // Load customers from yaml file
         $this->getApplication()->loadYaml('customers.yml');
-        
+
         // parameters
         $container = $this->getApplication()->getContainer();
         $dataCenter = $input->getArgument('datacenter');
@@ -38,11 +38,11 @@ class OrphanNotificationsCommand extends Command
         $customers = $container->getParameter('customers')[$dataCenter];
         $parameters = $container->getParameter($dataCenter);
         $onlyForScans = $parameters['onlyForScans'];
-        
+
         $connection = $container->get('connection');
         $connection->init($dataCenter);
-            
-        // start    
+
+        // start
         $output->writeln('<info>Processing start</>');
         $output->writeln('');
         $listNPDeleted = array();
@@ -86,11 +86,11 @@ class OrphanNotificationsCommand extends Command
                                     $output->writeln('<fg=red>Deleted</> ');
                                 }
                             }
-                        } 
+                        }
                     } else {
                         $numberNPSkipped++;
                         $output->writeln("\t<comment>Skipped</>");
-                    }                    
+                    }
                 }
             }
             $stats[$customerId] = array(
@@ -99,7 +99,7 @@ class OrphanNotificationsCommand extends Command
                 'numberNPDeleted'    => $numberNPDeleted
             );
         }
-        
+
         $output->writeln("");
         $output->writeln("<info>Completion of processing</>");
         $output->writeln("");
@@ -121,11 +121,11 @@ class OrphanNotificationsCommand extends Command
                         $element['notificationPolicy']['name'],
                     ),
                 ));
-            }    
+            }
             $tableNPDeleted->render();
             $output->writeln("");
         }
-          
+
         // shows summary table
         $i = 0;
         $output->writeln("<fg=red>******************** SUMMARY ********************</>");
@@ -153,7 +153,7 @@ class OrphanNotificationsCommand extends Command
             ->addRows(array(
               new TableSeparator(),
               array('', 'Customer Id', 'NP Processed', 'NP skipped', 'NP Deleted')));
-        
+
         $tableSummary->addRows(array(
             new TableSeparator(),
             array(
@@ -164,11 +164,11 @@ class OrphanNotificationsCommand extends Command
                 $numberNPDeleted,
             )
         ));
-        
+
         $tableSummary->render();
         $output->writeln("");
         $output->writeln("");
-        
+
     }
 
 }

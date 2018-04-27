@@ -25,7 +25,7 @@ class WrongNotificationsListCommand extends Command
     {
         // Load customers from yaml file
         $this->getApplication()->loadYaml('customers.yml');
-        
+
         // parameters
         $container = $this->getApplication()->getContainer();
         $dataCenter = $input->getArgument('datacenter');
@@ -37,12 +37,12 @@ class WrongNotificationsListCommand extends Command
         $server   = $parameters['server'];
         $port     = $parameters['port'];
         $headers  = $parameters['headers'];
-        $endpointTargets  = "http://" . $server . ":" . $port 
+        $endpointTargets  = "http://" . $server . ":" . $port
             . $parameters['endpointTargets'];
-        $endpointContacts  = "http://" . $server . ":" . $port 
+        $endpointContacts  = "http://" . $server . ":" . $port
             . $parameters['endpointContacts'];
-            
-        // start    
+
+        // start
         $output->writeln('<info>Processing start</>');
         $output->writeln('');
         $listNPwithTargetUnknown = array();
@@ -56,7 +56,7 @@ class WrongNotificationsListCommand extends Command
             $numberNTFailed = 0;
             $numberNTWrong = 0;
             $output->writeln('<fg=red>******************** Customer: ' . $customerId . " ********************</>");
-            $endpoint  = "http://" . $server . ":" . $port 
+            $endpoint  = "http://" . $server . ":" . $port
                 . $parameters['endpoint']
                 . "?customer_id=" . $customerId;
 
@@ -85,7 +85,7 @@ class WrongNotificationsListCommand extends Command
                                 $ntJson = curl_exec($ch2);						 // Execute
                                 curl_close($ch2);								 // Closing
                                 $nt = json_decode($ntJson, true);
-                                if (isset($nt) && $nt['channel']==='group') {    
+                                if (isset($nt) && $nt['channel']==='group') {
                                     $output->writeln("\t<info>* Group *</>");
                                     foreach ($nt['target'] as $contact) {
                                         $ch3 = curl_init();								 // Initiate curl
@@ -113,7 +113,7 @@ class WrongNotificationsListCommand extends Command
                                             );
                                         }
                                         break;
-                                    }    
+                                    }
                                 }elseif (isset($nt) && array_key_exists("id", $nt)) {
                                     $output->writeln("\t<info>" .  $nt['target'] ."</>");
                                     $numberNT++;
@@ -144,7 +144,7 @@ class WrongNotificationsListCommand extends Command
                                     );
                                 }
                             }
-                        } 
+                        }
                         if ($NPFailed) {
                           $numberNPFailed++;
                         }
@@ -152,8 +152,6 @@ class WrongNotificationsListCommand extends Command
                         $numberNPSkipped++;
                         $output->writeln("\t<comment>Skipped</>");
                     }
-                    
-                    
                 }
             }
             $stats[$customerId] = array(
@@ -165,7 +163,7 @@ class WrongNotificationsListCommand extends Command
                 'numberNTWrong'    => $numberNTWrong
             );
         }
-        
+
         $output->writeln("");
         $output->writeln("<info>Completion of processing</>");
         $output->writeln("");
@@ -191,11 +189,11 @@ class WrongNotificationsListCommand extends Command
                       $element['NotificationTarget']['customer_id'],
                     ),
                 ));
-            }    
+            }
             $tableNPwithTargetUnknown->render();
             $output->writeln("");
         }
-        
+
         // shows a table with notification policies with targets that doesn't exist.
         foreach ($listNPdoesntExist as $cid => $customer) {
             $output->writeln("");
@@ -213,11 +211,11 @@ class WrongNotificationsListCommand extends Command
                       json_encode($element['msg'])
                     ),
                 ));
-            }    
+            }
             $tableNPdoesntExist->render();
             $output->writeln("");
           }
-          
+
           // shows summary table
           $i = 0;
           $output->writeln("<fg=red>******************** SUMMARY ********************</>");
@@ -254,7 +252,7 @@ class WrongNotificationsListCommand extends Command
               ->addRows(array(
                 new TableSeparator(),
                 array('', 'Customer Id', 'NP Processed', 'NP skipped', 'NP Failed', 'NT Processed', 'NT Failed', 'NT Wrong')));
-          
+
           $tableSummary->addRows(array(
               new TableSeparator(),
               array(
@@ -268,7 +266,7 @@ class WrongNotificationsListCommand extends Command
                   $numberNTWrong
               )
           ));
-          
+
           $tableSummary->render();
           $output->writeln("");
           $output->writeln("Customers processed: " . count($customers));
@@ -281,7 +279,7 @@ class WrongNotificationsListCommand extends Command
           $output->writeln(is_string($percentage) ? $percentage : number_format($percentage, 1));
 
           $output->writeln("");
-        
+
     }
 
 }
